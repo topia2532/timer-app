@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>同時ゴール司令塔</title>
+<style>
+body { font-family:sans-serif; background:#f5f7fa; padding:20px; text-align:center; }
+.person { display:flex; gap:10px; margin-bottom:10px; }
+input { padding:8px; font-size:16px; flex:1; }
+button { padding:12px; font-size:18px; margin-top:10px; width:100%; }
+#mainTimer { font-size:64px; margin-top:20px; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<h1>同時ゴール司令塔</h1>
+<div id="inputs"></div>
+<button onclick="addPerson()">参加者を追加</button>
+<button onclick="calculate()">計算する</button>
+
+<div id="startArea"></div>
+<div id="mainTimer"></div>
+
+<script>
+let startTimes = [];
+
+function addPerson() {
+  const div = document.createElement("div");
+  div.className = "person";
+  div.innerHTML = `
+    <input placeholder="名前">
+    <input type="number" placeholder="到達時間(秒)">
+  `;
+  document.getElementById("inputs").appendChild(div);
+}
+
+function speak(text) {
+  const uttr = new SpeechSynthesisUtterance(text);
+  uttr.lang = 'ja-JP';
+  speechSynthesis.speak(uttr);
+}
+
+function beep(freq=1000, duration=200) {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.value = freq;
+  osc.start();
+  gain.gain.setValueAtTime(1, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration/1000);
+  osc.stop(ctx.currentTime + duration/1000);
+}
+
+function calculate() {
+  const people = document.querySelectorAll(".person");
+  let data = [];
+
+  people.forEach(p => {
+    const name = p.children[0].value || "名無し";
+    const time = parseFloat(p.children[1].value);
+    if (!isNaN(time)) data.push({name, time});
+  });
+
+  const maxTime = Math.max(...data.map(p => p.time));
+  startTimes = data.map(p => ({
+    name: p.name,
+    start: Math.round(maxTime - p.time)
+  }));
+
+  let html = "<h2>スタート番号</h2>";
+  startTimes.forEach(p => {
+    html += `<p>${p.name} → ${p.start}</p>`;
+  });
+
+  html += `<button onclick="startMasterTimer()">全員スタート</button>`;
+  document.getElementById("startArea").innerHTML = html;
+}
+
+function startMasterTimer() {
+  let prep = 5;
+  const display = document.getElementById("mainTimer");
+
+  let prepTimer = setInterval(() => {
+    display.textContent = prep;
+    speak(prep.toString());
+    prep--;
+    if (prep < 0) {
+      clearInterval(prepTimer);
+      speak("スタート");
+      beep(1500,400);
+      runMain();
+    }
+  }, 1000);
+}
+
+function runMain() {
+  let t = 0;
+  const display = document.getElementById("mainTimer");
+  display.textContent = t;
+
+  setInterval(() => {
+    t++;
+    display.textContent = t;
+
+    startTimes.forEach(p => {
+      if (p.start === t) {
+        speak(p.name + "さん スタート");
+        beep(1200,300);
+      }
+    });
+  }, 1000);
+}
+
+addPerson();
+</script>
+</body>
+</html>
