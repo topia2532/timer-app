@@ -42,16 +42,11 @@ function tone(freq, duration){
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.frequency.value = freq;
+  osc.type = "sine";
   osc.start();
   gain.gain.setValueAtTime(1, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration/1000);
   osc.stop(audioCtx.currentTime + duration/1000);
-}
-
-function speakNumber(num){
-  const uttr = new SpeechSynthesisUtterance(num.toString());
-  uttr.lang = 'ja-JP';
-  speechSynthesis.speak(uttr);
 }
 
 function addPerson() {
@@ -117,11 +112,11 @@ function runMain() {
     t++;
     display.textContent = t;
 
-    speakNumber(t); // 追加：数字読み上げ
+    tone(700,60); // 毎秒のカウント音
 
     startTimes.forEach(s => {
       if (s === t) {
-        tone(900,200);
+        tone(1000,200); // 出発合図音
       }
     });
   }, 1000);
@@ -130,7 +125,6 @@ function runMain() {
 function stopAll(){
   if(prepInterval) clearInterval(prepInterval);
   if(mainInterval) clearInterval(mainInterval);
-  speechSynthesis.cancel();
 }
 
 addPerson();
