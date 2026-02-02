@@ -38,6 +38,7 @@ let audioCtx;
 let interval = null;
 let t = 0;
 let endTime = null;
+let downStartTimes = [];
 
 function initAudio(){
   if(!audioCtx){
@@ -94,7 +95,17 @@ function calculate() {
     const maxTime = Math.max(...data.map(p => p.time));
     const diff = Math.round(maxTime - minTime);
     endTime = diff + 3;
+
+    downStartTimes = data.map(p => ({
+      name: p.name,
+      start: Math.round(p.time - minTime)
+    }));
+
     html += `<p>カウントダウン秒数 → ${endTime}</p>`;
+    html += `<h3>出発タイミング</h3>`;
+    downStartTimes.forEach(p=>{
+      html += `<p>${p.name} → 残り ${endTime - p.start} 秒で出発</p>`;
+    });
   }
 
   html += `<button onclick="startTimer()">開始</button>
@@ -105,7 +116,6 @@ function calculate() {
 function startTimer(){
   stopAll();
   initAudio();
-
   const display = document.getElementById("mainTimer");
 
   if(mode === "up"){
@@ -136,6 +146,12 @@ function startTimer(){
       t--;
       display.textContent = t;
       tone(700,60);
+
+      downStartTimes.forEach(p=>{
+        if(t === endTime - p.start){
+          tone(1000,200);
+        }
+      });
 
       if(t<=0){
         tone(400,400);
