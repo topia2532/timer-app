@@ -34,11 +34,11 @@ button { padding:12px; font-size:18px; margin-top:10px; width:100%; }
 <script>
 let mode = "up";
 let startTimes = [];
+let downStartTimes = [];
 let audioCtx;
 let interval = null;
 let t = 0;
 let endTime = null;
-let downStartTimes = [];
 
 function initAudio(){
   if(!audioCtx){
@@ -88,23 +88,22 @@ function calculate() {
     startTimes = data.map(p => Math.round(maxTime - p.time));
     endTime = Math.max(...startTimes) + 3;
 
-    data.forEach((p,i)=> html += `<p>${p.name} → ${startTimes[i]}</p>`);
+    data.forEach((p,i)=> html += `<p>${p.name} → ${startTimes[i]} 秒で出発</p>`);
 
   } else {
     const minTime = Math.min(...data.map(p => p.time));
-    const maxTime = Math.max(...data.map(p => p.time));
-    const diff = Math.round(maxTime - minTime);
-    endTime = diff + 3;
-
     downStartTimes = data.map(p => ({
       name: p.name,
       start: Math.round(p.time - minTime)
     }));
 
+    const maxStart = Math.max(...downStartTimes.map(p => p.start));
+    endTime = maxStart + 3;
+
     html += `<p>カウントダウン秒数 → ${endTime}</p>`;
     html += `<h3>出発タイミング</h3>`;
     downStartTimes.forEach(p=>{
-      html += `<p>${p.name} → 残り ${endTime - p.start} 秒で出発</p>`;
+      html += `<p>${p.name} → 残り ${p.start} 秒で出発</p>`;
     });
   }
 
@@ -148,7 +147,7 @@ function startTimer(){
       tone(700,60);
 
       downStartTimes.forEach(p=>{
-        if(t === endTime - p.start){
+        if(t===p.start){
           tone(1000,200);
         }
       });
