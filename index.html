@@ -10,19 +10,34 @@ body { font-family:sans-serif; background:#f5f7fa; padding:20px; text-align:cent
 input, select { padding:8px; font-size:16px; flex:1; }
 button { padding:12px; font-size:18px; margin-top:10px; width:100%; }
 .copyBtn { background:#4caf50; color:white; }
-.section { margin-top:15px; }
+.stopBtn { background:#ff4d4d; color:white; }
+.tabs button { width:32%; }
+.active { background:#333; color:white; }
+.section { display:none; margin-top:15px; }
 .result { margin-top:15px; font-size:18px; text-align:left; background:white; padding:15px; border-radius:8px; }
-label { display:block; margin-top:10px; }
+#mainTimer { font-size:64px; margin-top:20px; font-weight:bold; }
 </style>
 </head>
 <body>
 
 <h1>同時ゴール司令塔</h1>
 
+<div class="tabs">
+  <button id="upTab" class="active" onclick="switchMode('up')">カウントアップ（遠）</button>
+  <button id="downTab" onclick="switchMode('down')">カウントダウン（近）</button>
+  <button id="utcTab" onclick="switchMode('utc')">UTC出発計算</button>
+</div>
+
 <div id="inputs"></div>
 <button onclick="addPerson()">参加者を追加</button>
 
-<div class="section">
+<div id="timerControls" class="section" style="display:block;">
+  <button onclick="calculateTimer()">計算する</button>
+  <div id="startArea"></div>
+  <div id="mainTimer"></div>
+</div>
+
+<div id="utcControls" class="section">
   <label>到着予定UTC時刻：</label>
   <input type="datetime-local" id="goalTime">
 
@@ -33,17 +48,27 @@ label { display:block; margin-top:10px; }
     <option value="600">10分集結</option>
   </select>
 
-  <label>
-    <input type="checkbox" id="showJST"> JSTも併記する
-  </label>
-
+  <label><input type="checkbox" id="showJST"> JSTも併記する</label>
   <button onclick="calculateUTC()">出発時刻を計算</button>
+  <div id="results" class="result"></div>
 </div>
 
-<div id="results" class="result"></div>
-
 <script>
-let lastText="";
+let mode="up";
+let startTimes=[], downStartTimes=[], lastText="";
+let audioCtx, interval=null, prepInterval=null;
+let t=0, endTime=null;
+
+function initAudio(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }
+function tone(f,d){ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.value=f; o.start(); g.gain.setValueAtTime(1,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+d/1000); o.stop(audioCtx.currentTime+d/1000); }
+
+function switchMode(m){
+  mode=m;
+  ["up","down","utc"].forEach(x=>document.getElementById(x+"Tab").classList.toggle("active",x===m));
+  document.getElementById("timerControls").style.display=(m==="utc")?"none":"block";
+  document.getElementById("utcControls").style.display=(m==="utc")?"block":"none";
+  stopAll();
+}
 
 function addPerson(){
   const d=document.createElement("div");
@@ -52,18 +77,79 @@ function addPerson(){
   document.getElementById("inputs").appendChild(d);
 }
 
-function formatTime(date, offset=0){
-  const d=new Date(date.getTime()+offset*3600*1000);
-  return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}:${String(d.getUTCSeconds()).padStart(2,'0')}`;
+function calculateTimer(){
+  const people=document.querySelectorAll(".person");
+  let data=[];
+  people.forEach(p=>{
+    const name=p.children[0].value||"名無し";
+    const time=parseFloat(p.children[1].value);
+    if(!isNaN(time)) data.push({name,time});
+  });
+  if(data.length===0){alert("到達時間入力してね");return;}
+
+  let html="<h2>スタート指示</h2>";
+  let text="【スタート指示】\n";
+
+  if(mode==="up"){
+    const maxT=Math.max(...data.map(p=>p.time));
+    startTimes=data.map(p=>Math.round(maxT-p.time));
+    endTime=Math.max(...startTimes)+3;
+    data.forEach((p,i)=>{ html+=`<p>${p.name} → ${startTimes[i]}秒で出発</p>`; text+=`${p.name}: ${startTimes[i]}秒で出発\n`; });
+
+  }else{
+    const minT=Math.min(...data.map(p=>p.time));
+    downStartTimes=data.map(p=>({name:p.name,start:Math.round(p.time-minT)}));
+    const maxS=Math.max(...downStartTimes.map(p=>p.start));
+    endTime=maxS+3;
+    html+=`<p>カウントダウン秒数 → ${endTime}</p>`;
+    text+=`カウントダウン ${endTime}秒\n`;
+    downStartTimes.forEach(p=>{ html+=`<p>${p.name} → 残り${p.start}秒で出発</p>`; text+=`${p.name}: 残り${p.start}秒で出発\n`; });
+  }
+
+  lastText=text+"\n--- 同時ゴール司令塔 ---";
+
+  html+=`<button onclick="startTimer()">開始</button>
+         <button class="stopBtn" onclick="stopAll()">停止</button>
+         <button class="copyBtn" onclick="copyText()">結果をコピー</button>`;
+  document.getElementById("startArea").innerHTML=html;
 }
+
+function startTimer(){
+  stopAll(); initAudio();
+  const disp=document.getElementById("mainTimer");
+
+  if(mode==="up"){
+    let prep=5; disp.textContent=prep;
+    prepInterval=setInterval(()=>{
+      tone(500,120); prep--; disp.textContent=prep;
+      if(prep<0){clearInterval(prepInterval); tone(1500,300); startUp();}
+    },1000);
+  }else{
+    t=endTime; disp.textContent=t;
+    interval=setInterval(()=>{
+      t--; disp.textContent=t; tone(700,60);
+      downStartTimes.forEach(p=>{if(t===p.start) tone(1000,200);});
+      if(t<=0){tone(400,400); stopAll();}
+    },1000);
+  }
+}
+
+function startUp(){
+  t=0; const disp=document.getElementById("mainTimer");
+  interval=setInterval(()=>{
+    t++; disp.textContent=t; tone(700,60);
+    startTimes.forEach(s=>{if(s===t) tone(1000,200);});
+    if(t>=endTime){tone(400,400); stopAll();}
+  },1000);
+}
+
+function formatTime(date,offset=0){ const d=new Date(date.getTime()+offset*3600*1000); return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}:${String(d.getUTCSeconds()).padStart(2,'0')}`; }
 
 function calculateUTC(){
   const goal=document.getElementById("goalTime").value;
   const wait=parseInt(document.getElementById("waitTime").value);
   const showJST=document.getElementById("showJST").checked;
-
   if(!goal){alert("UTC時刻入れて");return;}
-
   const goalUTC=new Date(goal+"Z");
   const people=document.querySelectorAll(".person");
 
@@ -74,32 +160,20 @@ function calculateUTC(){
     const name=p.children[0].value||"名無し";
     const sec=parseFloat(p.children[1].value);
     if(isNaN(sec)) return;
-
     const st=new Date(goalUTC.getTime()-(sec+wait)*1000);
-    const utc=formatTime(st,0);
-
-    let line=`${name}  ▶  ${utc} UTC`;
-
-    if(showJST){
-      const jst=formatTime(st,9);
-      line+=`  ／  ${jst} JST`;
-    }
-
+    let line=`${name}  ▶  ${formatTime(st,0)} UTC`;
+    if(showJST) line+=`  ／  ${formatTime(st,9)} JST`;
     html+=`<p>${line}</p>`;
     text+=line+"\n";
   });
 
-  text+="\n--- 同時ゴール司令塔 ---";
-
+  lastText=text+"\n--- 同時ゴール司令塔 ---";
   html+=`<button class="copyBtn" onclick="copyText()">結果をコピー</button>`;
   document.getElementById("results").innerHTML=html;
-  lastText=text;
 }
 
-function copyText(){
-  navigator.clipboard.writeText(lastText);
-  alert("整形済み結果をコピーしました");
-}
+function copyText(){ navigator.clipboard.writeText(lastText); alert("コピー完了"); }
+function stopAll(){ if(interval) clearInterval(interval); if(prepInterval) clearInterval(prepInterval); }
 
 addPerson();
 </script>
