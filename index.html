@@ -148,29 +148,45 @@ function formatTime(date,offset=0){ const d=new Date(date.getTime()+offset*3600*
 function calculateUTC(){
   const goal=document.getElementById("goalTime").value;
   const wait=parseInt(document.getElementById("waitTime").value);
+  const waitLabel=document.getElementById("waitTime").selectedOptions[0].text;
   const showJST=document.getElementById("showJST").checked;
+
   if(!goal){alert("UTC時刻入れて");return;}
+
   const goalUTC=new Date(goal+"Z");
+  const goalStr=formatTime(goalUTC,0);
+
   const people=document.querySelectorAll(".person");
 
   let html="<h2>出発UTC時刻（集結時間含む）</h2>";
+  html+=`<p><strong>到着予定：</strong> ${goalStr} UTC</p>`;
+  html+=`<p><strong>集結時間：</strong> ${waitLabel}</p><hr>`;
+
   let text="【出発UTC時刻（集結時間含む）】\n";
+  text+=`到着予定：${goalStr} UTC\n`;
+  text+=`集結時間：${waitLabel}\n\n`;
 
   people.forEach(p=>{
     const name=p.children[0].value||"名無し";
     const sec=parseFloat(p.children[1].value);
     if(isNaN(sec)) return;
+
     const st=new Date(goalUTC.getTime()-(sec+wait)*1000);
     let line=`${name}  ▶  ${formatTime(st,0)} UTC`;
-    if(showJST) line+=`  ／  ${formatTime(st,9)} JST`;
+
+    if(showJST){
+      line+=`  ／  ${formatTime(st,9)} JST`;
+    }
+
     html+=`<p>${line}</p>`;
     text+=line+"\n";
   });
 
-  lastText=text+"\n--- 同時ゴール司令塔 ---";
+  lastText=text;
   html+=`<button class="copyBtn" onclick="copyText()">結果をコピー</button>`;
   document.getElementById("results").innerHTML=html;
 }
+
 
 function copyText(){ navigator.clipboard.writeText(lastText); alert("コピー完了"); }
 function stopAll(){ if(interval) clearInterval(interval); if(prepInterval) clearInterval(prepInterval); }
@@ -179,3 +195,4 @@ addPerson();
 </script>
 </body>
 </html>
+
