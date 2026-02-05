@@ -7,7 +7,7 @@
 <style>
 body { font-family:sans-serif; background:#f5f7fa; padding:20px; text-align:center; }
 .person { display:flex; gap:10px; margin-bottom:10px; }
-input { padding:8px; font-size:16px; flex:1; }
+input, select { padding:8px; font-size:16px; flex:1; }
 button { padding:12px; font-size:18px; margin-top:10px; width:100%; }
 #mainTimer { font-size:64px; margin-top:20px; font-weight:bold; }
 .stopBtn { background:#ff4d4d; color:white; }
@@ -40,6 +40,14 @@ button { padding:12px; font-size:18px; margin-top:10px; width:100%; }
 <div id="utcControls" class="section">
   <label>到着予定UTC時刻：</label>
   <input type="datetime-local" id="goalTime">
+
+  <label>集結待機時間：</label>
+  <select id="waitTime">
+    <option value="60">1分集結</option>
+    <option value="300">5分集結</option>
+    <option value="600">10分集結</option>
+  </select>
+
   <button onclick="calculateUTC()">出発時刻を計算</button>
   <div id="results" class="result"></div>
 </div>
@@ -77,67 +85,27 @@ function addPerson(){
   document.getElementById("inputs").appendChild(d);
 }
 
-function calculateTimer(){
-  const people=document.querySelectorAll(".person");
-  let data=[];
-  people.forEach(p=>{
-    const name=p.children[0].value||"名無し";
-    const time=parseFloat(p.children[1].value);
-    if(!isNaN(time)) data.push({name,time});
-  });
-  if(data.length===0){alert("到達時間入力してね");return;}
-
-  let html="<h2>スタート指示</h2>";
-  let text="";
-
-  if(mode==="up"){
-    const maxT=Math.max(...data.map(p=>p.time));
-    startTimes=data.map(p=>Math.round(maxT-p.time));
-    endTime=Math.max(...startTimes)+3;
-    data.forEach((p,i)=>{
-      html+=`<p>${p.name} → ${startTimes[i]}秒で出発</p>`;
-      text+=`${p.name}: ${startTimes[i]}秒で出発\n`;
-    });
-
-  }else{
-    const minT=Math.min(...data.map(p=>p.time));
-    downStartTimes=data.map(p=>({name:p.name,start:Math.round(p.time-minT)}));
-    const maxS=Math.max(...downStartTimes.map(p=>p.start));
-    endTime=maxS+3;
-    html+=`<p>カウントダウン秒数 → ${endTime}</p><h3>出発タイミング</h3>`;
-    text+=`カウントダウン ${endTime}秒\n`;
-    downStartTimes.forEach(p=>{
-      html+=`<p>${p.name} → 残り${p.start}秒で出発</p>`;
-      text+=`${p.name}: 残り${p.start}秒で出発\n`;
-    });
-  }
-
-  lastText=text;
-
-  html+=`<button onclick="startTimer()">開始</button>
-         <button class="stopBtn" onclick="stopAll()">停止</button>
-         <button class="copyBtn" onclick="copyText()">結果をコピー</button>`;
-
-  document.getElementById("startArea").innerHTML=html;
-}
-
 function calculateUTC(){
   const goal=document.getElementById("goalTime").value;
+  const wait=parseInt(document.getElementById("waitTime").value);
   if(!goal){alert("UTC時刻入れて");return;}
+
   const goalUTC=new Date(goal+"Z");
   const people=document.querySelectorAll(".person");
 
-  let html="<h2>出発UTC時刻</h2>";
+  let html="<h2>出発UTC時刻（集結時間含む）</h2>";
   let text="";
 
   people.forEach(p=>{
     const name=p.children[0].value||"名無し";
     const sec=parseFloat(p.children[1].value);
     if(isNaN(sec)) return;
-    const st=new Date(goalUTC.getTime()-sec*1000);
+
+    const st=new Date(goalUTC.getTime()-(sec+wait)*1000);
     const hh=String(st.getUTCHours()).padStart(2,'0');
     const mm=String(st.getUTCMinutes()).padStart(2,'0');
     const ss=String(st.getUTCSeconds()).padStart(2,'0');
+
     html+=`<p>${name} → ${hh}:${mm}:${ss} UTC 出発</p>`;
     text+=`${name}: ${hh}:${mm}:${ss} UTC 出発\n`;
   });
@@ -147,44 +115,8 @@ function calculateUTC(){
   document.getElementById("results").innerHTML=html;
 }
 
-function copyText(){
-  navigator.clipboard.writeText(lastText);
-  alert("コピー完了");
-}
-
-function startTimer(){
-  stopAll(); initAudio();
-  const disp=document.getElementById("mainTimer");
-
-  if(mode==="up"){
-    let prep=5; disp.textContent=prep;
-    prepInterval=setInterval(()=>{
-      tone(500,120); prep--; disp.textContent=prep;
-      if(prep<0){clearInterval(prepInterval); tone(1500,300); startUp();}
-    },1000);
-  }else{
-    t=endTime; disp.textContent=t;
-    interval=setInterval(()=>{
-      t--; disp.textContent=t; tone(700,60);
-      downStartTimes.forEach(p=>{if(t===p.start) tone(1000,200);});
-      if(t<=0){tone(400,400); stopAll();}
-    },1000);
-  }
-}
-
-function startUp(){
-  t=0; const disp=document.getElementById("mainTimer");
-  interval=setInterval(()=>{
-    t++; disp.textContent=t; tone(700,60);
-    startTimes.forEach(s=>{if(s===t) tone(1000,200);});
-    if(t>=endTime){tone(400,400); stopAll();}
-  },1000);
-}
-
-function stopAll(){
-  if(interval) clearInterval(interval);
-  if(prepInterval) clearInterval(prepInterval);
-}
+function copyText(){ navigator.clipboard.writeText(lastText); alert("コピー完了"); }
+function stopAll(){ if(interval) clearInterval(interval); if(prepInterval) clearInterval(prepInterval); }
 
 addPerson();
 </script>
