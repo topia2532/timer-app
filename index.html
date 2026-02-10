@@ -72,9 +72,7 @@ input,select,button{margin:5px 0;padding:8px;width:100%;box-sizing:border-box}
 </div>
 
 <script>
-let cuData=[];
-let cuMax=0;
-let cuCount=0;
+let timerInt=null,lastText="",cdCount=0,cuMax=0,cuData=[];
 
 function showTab(n){
  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",i===n));
@@ -101,98 +99,76 @@ function getData(){
 
 function beep(){new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg").play();}
 function copyText(){navigator.clipboard.writeText(lastText);alert("コピー完了");}
-function stopTimer(){
- clearInterval(timerInt);
- timerInt=null;
- cuTimer.textContent="";
- cdTimer.textContent="";
- cuCount=0;
-}
+function stopTimer(){clearInterval(timerInt);}
 
 // 🌍 UTC
-for(let i=0;i<=60;i++){let o=document.createElement("option");o.value=i*60;o.textContent=i+"分";waitTime.appendChild(o);}
+for(let i=0;i<=60;i++){
+ const o=document.createElement("option");
+ o.value=i*60;
+ o.textContent=i+"分";
+ waitTime.appendChild(o);
+}
 function fmt(d){return d.toISOString().replace("T"," ").split(".")[0];}
+
 function calcUTC(){
  const hm=goalHM.value;if(!hm)return alert("時刻入力");
  const now=new Date();const [h,m]=hm.split(":").map(Number);
- const g=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),h,m,0));
- const wait=parseInt(waitTime.value);const adj=parseInt(adjustSec.value);
+ const goalUTC=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),h,m,0));
+ const wait=parseInt(waitTime.value);
+ const adj=parseInt(adjustSec.value);
 
- let text=`【出発UTC】\n到着:${fmt(g)} UTC\n集結:${waitTime.selectedOptions[0].text}\n微調整:${adj}秒\n\n`;
+ let text=`【出発UTC時刻（集結時間含む）】\n到着予定:${fmt(goalUTC)} UTC\n集結:${waitTime.selectedOptions[0].text}\n微調整:${adj}秒\n\n`;
+
  getData().forEach(d=>{
-  const st=new Date(g.getTime()-(d.time+wait-adj)*1000);
+  const st=new Date(goalUTC.getTime()-(d.time+wait-adj)*1000);
   text+=`${d.name} ▶ ${fmt(st)} UTC\n`;
  });
+
  lastText=text;
  utcResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
 }
 
-// 🟦 CD 計算
 function calcCD(){
  const data=getData();if(data.length<2)return alert("2人以上");
  const min=Math.min(...data.map(d=>d.time));
  const max=Math.max(...data.map(d=>d.time));
  cdCount=(max-min)+3;
 
- let text=`【CD計算】差:${max-min}秒 → カウント:${cdCount}秒\n\n`;
+ let text=`【カウントダウン作戦】\n差:${max-min}秒 → カウント:${cdCount}秒\n\n`;
  data.forEach(d=>text+=`${d.name}：${d.time-min}秒で出発\n`);
+
  lastText=text;
  cdResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
 }
 
-// 🟦 CD 開始
 function startCD(){
  if(cdCount<=0)return alert("先に計算");
- let c=cdCount;
  stopTimer();
+ let c=cdCount;
  timerInt=setInterval(()=>{cdTimer.textContent=c;beep();c--;if(c<0)stopTimer();},1000);
 }
 
-// 🟥 CU 計算
 function calcCU(){
- cuData=getData();
- if(cuData.length<2){ alert("2人以上"); return; }
-
+ cuData=getData();if(cuData.length<2)return alert("2人以上");
  cuMax=Math.max(...cuData.map(d=>d.time));
 
- let text=`【CU計算】カウントアップ${cuMax}秒\n\n`;
- cuData.forEach(d=>{
-   const start=cuMax-d.time;
-   text+=`${d.name}：${start}秒で出発\n`;
- });
-
+ let text=`【カウントアップ作戦】カウントアップ${cuMax}秒\n\n`;
+ cuData.forEach(d=>text+=`${d.name}：${cuMax-d.time}秒で出発\n`);
  lastText=text;
  cuResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
 }
 
-// 🟥 CU 開始
 function startCU(){
- if(cuMax===0){ alert("先に計算"); return; }
-
+ if(cuMax<=0)return alert("先に計算");
  stopTimer();
- cuCount=-3; // 準備3秒
-
+ let count=-3;
  timerInt=setInterval(()=>{
-   cuTimer.textContent=cuCount;
-   beep();
-
-   cuData.forEach(d=>{
-     const start=cuMax-d.time;
-     if(cuCount===start){
-       console.log(d.name+" 出発");
-     }
-   });
-
-   if(cuCount>=cuMax){
-     stopTimer();
-     return;
-   }
-
-   cuCount++;
+  cuTimer.textContent=count;beep();
+  if(count>=cuMax){stopTimer();return;}
+  count++;
  },1000);
 }
-
 </script>
+
 </body>
 </html>
-
