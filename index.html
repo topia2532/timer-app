@@ -37,8 +37,8 @@ input,select,button{margin:5px 0;padding:8px;width:100%;box-sizing:border-box}
 
 <!-- ================= UTC計算 ================= -->
 <div class="section active">
-  <h3>到着UTC時刻</h3>
-  <input type="datetime-local" id="goalTime">
+  <h3>到着UTC時刻（時と分だけ）</h3>
+<input type="time" id="goalHM" step="60">
 
   <label>集結待機時間</label>
   <select id="waitTime"></select>
@@ -97,22 +97,38 @@ for(let i=0;i<=60;i++){
 // UTC計算
 function fmt(d){return d.toISOString().replace("T"," ").split(".")[0];}
 function calcUTC(){
- const goal=goalTime.value;if(!goal)return alert("時刻入力");
- const g=new Date(goal+"Z");
- const wait=parseInt(waitTime.value);
- const adj=parseInt(adjustSec.value);
+  const hm=document.getElementById("goalHM").value;
+  if(!hm) return alert("時刻入力");
 
- let text=`【出発UTC時刻（集結時間含む）】\n到着予定:${fmt(g)} UTC\n集結:${waitTime.selectedOptions[0].text}\n微調整:${adj}秒\n\n`;
- document.querySelectorAll(".person").forEach(p=>{
-  const n=p.children[0].value||"名無し";
-  const s=parseFloat(p.children[1].value);
-  if(isNaN(s))return;
-  const st=new Date(g.getTime()-(s+wait-adj)*1000);
-  text+=`${n} ▶ ${fmt(st)} UTC\n`;
- });
- lastText=text;
- utcResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
+  const now=new Date();
+  const [h,m]=hm.split(":").map(Number);
+
+  // 今日のUTC日付を取得
+  const goalUTC=new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+    h,m,0
+  ));
+
+  const wait=parseInt(waitTime.value);
+  const adj=parseInt(adjustSec.value);
+
+  let text=`【出発UTC時刻（集結時間含む）】\n到着予定:${fmt(goalUTC)} UTC\n集結:${waitTime.selectedOptions[0].text}\n微調整:${adj}秒\n\n`;
+
+  document.querySelectorAll(".person").forEach(p=>{
+    const n=p.children[0].value||"名無し";
+    const s=parseFloat(p.children[1].value);
+    if(isNaN(s)) return;
+
+    const st=new Date(goalUTC.getTime()-(s+wait-adj)*1000);
+    text+=`${n} ▶ ${fmt(st)} UTC\n`;
+  });
+
+  lastText=text;
+  utcResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
 }
+
 function copyText(){navigator.clipboard.writeText(lastText);alert("コピー完了");}
 
 // 🟦 カウントダウン（近）
@@ -137,3 +153,4 @@ function stopCU(){clearInterval(cuInt);}
 </script>
 </body>
 </html>
+
