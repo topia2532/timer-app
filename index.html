@@ -99,7 +99,12 @@ function getData(){
 
 function beep(){new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg").play();}
 function copyText(){navigator.clipboard.writeText(lastText);alert("コピー完了");}
-function stopTimer(){clearInterval(timerInt);}
+function stopTimer(){
+ clearInterval(timerInt);
+ cdTimer.textContent="";
+ cuTimer.textContent="";
+ cuCount=0;
+}
 
 // 🌍 UTC
 for(let i=0;i<=60;i++){let o=document.createElement("option");o.value=i*60;o.textContent=i+"分";waitTime.appendChild(o);}
@@ -181,13 +186,9 @@ function startCU(){
   cuCount++;
  },1000);
 }
-function stopTimer(){
- clearInterval(timerInt);
- cdTimer.textContent="";
- cuTimer.textContent="";
- cuCount=0;
-}
+
 </script>
 </body>
 </html>
+
 
