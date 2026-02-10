@@ -72,7 +72,9 @@ input,select,button{margin:5px 0;padding:8px;width:100%;box-sizing:border-box}
 </div>
 
 <script>
-let cuData=[],cuMax=0,cuCount=0;
+let cuData=[];
+let cuMax=0;
+let cuCount=0;
 
 function showTab(n){
  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",i===n));
@@ -101,8 +103,9 @@ function beep(){new Audio("https://actions.google.com/sounds/v1/alarms/beep_shor
 function copyText(){navigator.clipboard.writeText(lastText);alert("コピー完了");}
 function stopTimer(){
  clearInterval(timerInt);
- cdTimer.textContent="";
+ timerInt=null;
  cuTimer.textContent="";
+ cdTimer.textContent="";
  cuCount=0;
 }
 
@@ -148,14 +151,13 @@ function startCD(){
 // 🟥 CU 計算
 function calcCU(){
  cuData=getData();
- if(cuData.length<2) return alert("2人以上");
+ if(cuData.length<2){ alert("2人以上"); return; }
 
- const max=Math.max(...cuData.map(d=>d.time));
- cuMax=max;
+ cuMax=Math.max(...cuData.map(d=>d.time));
 
- let text=`【CU計算】カウントアップ${max}秒\n\n`;
+ let text=`【CU計算】カウントアップ${cuMax}秒\n\n`;
  cuData.forEach(d=>{
-   const start=max-d.time;
+   const start=cuMax-d.time;
    text+=`${d.name}：${start}秒で出発\n`;
  });
 
@@ -165,26 +167,32 @@ function calcCU(){
 
 // 🟥 CU 開始
 function startCU(){
- if(cuMax<=0) return alert("先に計算");
+ if(cuMax===0){ alert("先に計算"); return; }
 
  stopTimer();
  cuCount=-3; // 準備3秒
 
  timerInt=setInterval(()=>{
-  cuTimer.textContent=cuCount;
-  beep();
+   cuTimer.textContent=cuCount;
+   beep();
 
-  // 出発通知タイミング
-  cuData.forEach(d=>{
-    const start=cuMax-d.time;
-    if(cuCount===start) console.log(d.name+" 出発");
-  });
+   cuData.forEach(d=>{
+     const start=cuMax-d.time;
+     if(cuCount===start){
+       console.log(d.name+" 出発");
+     }
+   });
 
-  if(cuCount>=cuMax){ stopTimer(); return; }
+   if(cuCount>=cuMax){
+     stopTimer();
+     return;
+   }
 
-  cuCount++;
+   cuCount++;
  },1000);
 }
+
 </script>
 </body>
 </html>
+
