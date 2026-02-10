@@ -72,7 +72,7 @@ input,select,button{margin:5px 0;padding:8px;width:100%;box-sizing:border-box}
 </div>
 
 <script>
-let timerInt=null,lastText="",cdCount=0,cuData=[];
+let cuData=[],cuMax=0,cuCount=0;
 
 function showTab(n){
  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",i===n));
@@ -142,25 +142,52 @@ function startCD(){
 
 // 🟥 CU 計算
 function calcCU(){
- cuData=getData();if(cuData.length<2)return alert("2人以上");
+ cuData=getData();
+ if(cuData.length<2) return alert("2人以上");
+
  const max=Math.max(...cuData.map(d=>d.time));
- let text="【CU計算】\n\n";
- cuData.forEach(d=>text+=`${d.name}：${max-d.time}秒で出発\n`);
+ cuMax=max;
+
+ let text=`【CU計算】カウントアップ${max}秒\n\n`;
+ cuData.forEach(d=>{
+   const start=max-d.time;
+   text+=`${d.name}：${start}秒で出発\n`;
+ });
+
  lastText=text;
  cuResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
 }
 
+
 // 🟥 CU 開始
 function startCU(){
- if(cuData.length<2)return alert("先に計算");
- let prep=5;cuTimer.textContent="準備 "+prep;
+ if(cuMax<=0) return alert("先に計算");
+
  stopTimer();
+ cuCount=-3; // 準備3秒
+
  timerInt=setInterval(()=>{
+  cuTimer.textContent=cuCount;
   beep();
-  if(prep>0){prep--;cuTimer.textContent="準備 "+prep;}
-  else{cuTimer.textContent="+"+(5-prep-1)+"秒";}
+
+  // 出発通知タイミング
+  cuData.forEach(d=>{
+    const start=cuMax-d.time;
+    if(cuCount===start) console.log(d.name+" 出発");
+  });
+
+  if(cuCount>=cuMax){ stopTimer(); return; }
+
+  cuCount++;
  },1000);
+}
+function stopTimer(){
+ clearInterval(timerInt);
+ cdTimer.textContent="";
+ cuTimer.textContent="";
+ cuCount=0;
 }
 </script>
 </body>
 </html>
+
