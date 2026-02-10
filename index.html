@@ -39,18 +39,20 @@ button { padding:12px; font-size:18px; margin-top:10px; width:100%; }
 
 <div id="utcControls" class="section">
   <label>到着予定UTC時刻：</label>
-  <input type="datetime-local" id="goalTime">
+<input type="datetime-local" id="goalTime">
 
-  <label>集結待機時間：</label>
-  <select id="waitTime">
-    <option value="60">1分集結</option>
-    <option value="300">5分集結</option>
-    <option value="600">10分集結</option>
-  </select>
+<label>集結待機時間：</label>
+<select id="waitTime"></select>
 
-  <label><input type="checkbox" id="showJST"> JSTも併記する</label>
-  <button onclick="calculateUTC()">出発時刻を計算</button>
-  <div id="results" class="result"></div>
+<label>微調整：</label>
+<select id="adjustSec">
+  <option value="-5">-5秒</option>
+  <option value="0" selected>±0秒</option>
+  <option value="5">+5秒</option>
+</select>
+
+<button onclick="calculateUTC()">出発時刻を計算</button>
+<div id="results" class="result"></div>
 </div>
 
 <script>
@@ -71,10 +73,13 @@ function switchMode(m){
 }
 
 function addPerson(){
-  const d=document.createElement("div");
-  d.className="person";
-  d.innerHTML=`<input placeholder="名前"><input type="number" placeholder="到達時間(秒)">`;
-  document.getElementById("inputs").appendChild(d);
+  // 0〜60分生成
+const waitSel=document.getElementById("waitTime");
+for(let i=0;i<=60;i++){
+  const opt=document.createElement("option");
+  opt.value=i*60;
+  opt.textContent=i+"分";
+  waitSel.appendChild(opt);
 }
 
 function calculateTimer(){
@@ -149,7 +154,7 @@ function calculateUTC(){
   const goal=document.getElementById("goalTime").value;
   const wait=parseInt(document.getElementById("waitTime").value);
   const waitLabel=document.getElementById("waitTime").selectedOptions[0].text;
-  const showJST=document.getElementById("showJST").checked;
+  const adjust=parseInt(document.getElementById("adjustSec").value);
 
   if(!goal){alert("UTC時刻入れて");return;}
 
@@ -160,23 +165,21 @@ function calculateUTC(){
 
   let html="<h2>出発UTC時刻（集結時間含む）</h2>";
   html+=`<p><strong>到着予定：</strong> ${goalStr} UTC</p>`;
-  html+=`<p><strong>集結時間：</strong> ${waitLabel}</p><hr>`;
+  html+=`<p><strong>集結時間：</strong> ${waitLabel}</p>`;
+  html+=`<p><strong>微調整：</strong> ${adjust}秒</p><hr>`;
 
   let text="【出発UTC時刻（集結時間含む）】\n";
   text+=`到着予定：${goalStr} UTC\n`;
-  text+=`集結時間：${waitLabel}\n\n`;
+  text+=`集結時間：${waitLabel}\n`;
+  text+=`微調整：${adjust}秒\n\n`;
 
   people.forEach(p=>{
     const name=p.children[0].value||"名無し";
     const sec=parseFloat(p.children[1].value);
     if(isNaN(sec)) return;
 
-    const st=new Date(goalUTC.getTime()-(sec+wait)*1000);
-    let line=`${name}  ▶  ${formatTime(st,0)} UTC`;
-
-    if(showJST){
-      line+=`  ／  ${formatTime(st,9)} JST`;
-    }
+    const st=new Date(goalUTC.getTime()-(sec+wait-adjust)*1000);
+    const line=`${name}  ▶  ${formatTime(st,0)} UTC`;
 
     html+=`<p>${line}</p>`;
     text+=line+"\n";
@@ -195,4 +198,5 @@ addPerson();
 </script>
 </body>
 </html>
+
 
