@@ -6,7 +6,7 @@
 <title>同時ゴール司令塔</title>
 <style>
 body{font-family:sans-serif;background:#111;color:#eee;margin:0;padding:10px}
-h1{color:#6cf;text-align:center}
+h1{text-align:center;color:#6cf}
 .tabs{display:flex;margin-bottom:10px}
 .tab{flex:1;padding:10px;background:#222;text-align:center;cursor:pointer}
 .tab.active{background:#6cf;color:#000;font-weight:bold}
@@ -17,7 +17,7 @@ input,select,button{margin:5px 0;padding:8px;width:100%;box-sizing:border-box}
 .person input{flex:1}
 .result{margin-top:10px;padding:10px;background:#222;border-radius:6px;white-space:pre-line}
 .copyBtn{background:#28a;color:#fff;border:none;padding:10px;border-radius:4px;width:100%}
-.timerDisplay{font-size:1.5em;text-align:center;margin-top:10px}
+.timer{font-size:1.8em;text-align:center;margin-top:10px}
 </style>
 </head>
 <body>
@@ -25,18 +25,19 @@ input,select,button{margin:5px 0;padding:8px;width:100%;box-sizing:border-box}
 <h1>同時ゴール司令塔</h1>
 
 <div class="tabs">
-  <div class="tab active" onclick="showTab(0)">UTC出発計算</div>
-  <div class="tab" onclick="showTab(1)">カウントダウン</div>
-  <div class="tab" onclick="showTab(2)">カウントアップ</div>
+  <div class="tab active" onclick="showTab(0)">🌍 UTC出発計算</div>
+  <div class="tab" onclick="showTab(1)">🟦 カウントダウン（近）</div>
+  <div class="tab" onclick="showTab(2)">🟥 カウントアップ（遠）</div>
 </div>
 
-<!-- ================= UTC計算 ================= -->
-<div class="section active" id="utcSection">
-  <h2>参加者</h2>
-  <div id="people"></div>
-  <button onclick="addPerson()">参加者追加</button>
+<!-- 共通参加者 -->
+<h2>参加者</h2>
+<div id="people"></div>
+<button onclick="addPerson()">参加者追加</button>
 
-  <h2>到着UTC時刻</h2>
+<!-- ================= UTC計算 ================= -->
+<div class="section active">
+  <h3>到着UTC時刻</h3>
   <input type="datetime-local" id="goalTime">
 
   <label>集結待機時間</label>
@@ -49,96 +50,90 @@ input,select,button{margin:5px 0;padding:8px;width:100%;box-sizing:border-box}
     <option value="5">+5秒</option>
   </select>
 
-  <button onclick="calculateUTC()">出発時刻を計算</button>
+  <button onclick="calcUTC()">出発時刻を計算</button>
   <div id="utcResult" class="result"></div>
 </div>
 
-<!-- ================= カウントダウン ================= -->
-<div class="section" id="cdSection">
-  <h2>カウントダウン</h2>
-  <input type="number" id="cdSec" placeholder="秒数">
-  <button onclick="startCountdown()">開始</button>
-  <div id="cdDisplay" class="timerDisplay"></div>
+<!-- ================= カウントダウン（近） ================= -->
+<div class="section">
+  <button onclick="startCD()">カウント開始</button>
+  <div id="cdTimer" class="timer"></div>
+  <div id="cdResult" class="result"></div>
 </div>
 
-<!-- ================= カウントアップ ================= -->
-<div class="section" id="cuSection">
-  <h2>カウントアップ</h2>
-  <button onclick="startCountup()">開始</button>
-  <button onclick="stopCountup()">停止</button>
-  <div id="cuDisplay" class="timerDisplay">0秒</div>
+<!-- ================= カウントアップ（遠） ================= -->
+<div class="section">
+  <button onclick="startCU()">5秒準備→開始</button>
+  <button onclick="stopCU()">停止</button>
+  <div id="cuTimer" class="timer"></div>
 </div>
 
 <script>
 let lastText="";
-let cuInterval=null, cuSec=0;
+let cuInt=null,cuSec=0;
+function beep(){new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg").play();}
 
-// タブ切替
+// タブ
 function showTab(n){
-  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",i===n));
-  document.querySelectorAll(".section").forEach((s,i)=>s.classList.toggle("active",i===n));
+ document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",i===n));
+ document.querySelectorAll(".section").forEach((s,i)=>s.classList.toggle("active",i===n));
 }
 
 // 参加者
 function addPerson(){
-  const div=document.createElement("div");
-  div.className="person";
-  div.innerHTML='<input placeholder="名前"><input type="number" placeholder="移動秒">';
-  document.getElementById("people").appendChild(div);
+ const d=document.createElement("div");
+ d.className="person";
+ d.innerHTML='<input placeholder="名前"><input type="number" placeholder="到達秒">';
+ people.appendChild(d);
 }
 addPerson();
 
-// 待機時間0〜60分
-const waitSel=document.getElementById("waitTime");
+// 待機時間生成
 for(let i=0;i<=60;i++){
-  const o=document.createElement("option");
-  o.value=i*60;
-  o.textContent=i+"分";
-  waitSel.appendChild(o);
+ const o=document.createElement("option");
+ o.value=i*60;o.textContent=i+"分";waitTime.appendChild(o);
 }
-
-// 時刻整形
-function fmt(d){return d.toISOString().replace("T"," ").split(".")[0];}
 
 // UTC計算
-function calculateUTC(){
-  const goal=document.getElementById("goalTime").value;
-  if(!goal){alert("時刻入力");return;}
+function fmt(d){return d.toISOString().replace("T"," ").split(".")[0];}
+function calcUTC(){
+ const goal=goalTime.value;if(!goal)return alert("時刻入力");
+ const g=new Date(goal+"Z");
+ const wait=parseInt(waitTime.value);
+ const adj=parseInt(adjustSec.value);
 
-  const goalUTC=new Date(goal+"Z");
-  const wait=parseInt(waitSel.value);
-  const adjust=parseInt(document.getElementById("adjustSec").value);
-
-  let text=`【出発UTC時刻（集結時間含む）】\n到着予定: ${fmt(goalUTC)} UTC\n集結時間: ${waitSel.selectedOptions[0].text}\n微調整: ${adjust}秒\n\n`;
-  document.querySelectorAll(".person").forEach(p=>{
-    const name=p.children[0].value||"名無し";
-    const sec=parseFloat(p.children[1].value);
-    if(isNaN(sec)) return;
-    const st=new Date(goalUTC.getTime()-(sec+wait-adjust)*1000);
-    text+=`${name} ▶ ${fmt(st)} UTC\n`;
-  });
-
-  lastText=text;
-  document.getElementById("utcResult").innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
+ let text=`【出発UTC時刻（集結時間含む）】\n到着予定:${fmt(g)} UTC\n集結:${waitTime.selectedOptions[0].text}\n微調整:${adj}秒\n\n`;
+ document.querySelectorAll(".person").forEach(p=>{
+  const n=p.children[0].value||"名無し";
+  const s=parseFloat(p.children[1].value);
+  if(isNaN(s))return;
+  const st=new Date(g.getTime()-(s+wait-adj)*1000);
+  text+=`${n} ▶ ${fmt(st)} UTC\n`;
+ });
+ lastText=text;
+ utcResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
 }
-
-// コピー
 function copyText(){navigator.clipboard.writeText(lastText);alert("コピー完了");}
 
-// カウントダウン
-function startCountdown(){
-  let s=parseInt(cdSec.value);
-  const disp=document.getElementById("cdDisplay");
-  const i=setInterval(()=>{disp.textContent=s+"秒";s--;if(s<0)clearInterval(i);},1000);
+// 🟦 カウントダウン（近）
+function startCD(){
+ let times=[...document.querySelectorAll(".person input:nth-child(2)")].map(i=>parseFloat(i.value)).filter(x=>!isNaN(x));
+ if(times.length<2)return alert("複数人必要");
+ const min=Math.min(...times),max=Math.max(...times);
+ let cd=(max-min)+3;
+ cdResult.textContent=`差:${max-min}秒 → カウント:${cd}秒`;
+ const t=setInterval(()=>{cdTimer.textContent=cd;beep();cd--;if(cd<0)clearInterval(t);},1000);
 }
 
-// カウントアップ
-function startCountup(){
-  if(cuInterval) return;
-  cuInterval=setInterval(()=>{cuSec++;cuDisplay.textContent=cuSec+"秒";},1000);
+// 🟥 カウントアップ（遠）
+function startCU(){
+ let prep=5;cuTimer.textContent="準備 "+prep;
+ const p=setInterval(()=>{prep--;cuTimer.textContent="準備 "+prep;beep();
+ if(prep<0){clearInterval(p);cuSec=0;
+ cuInt=setInterval(()=>{cuTimer.textContent=cuSec;beep();cuSec++;},1000);}
+ },1000);
 }
-function stopCountup(){clearInterval(cuInterval);cuInterval=null;}
+function stopCU(){clearInterval(cuInt);}
 </script>
-
 </body>
 </html>
