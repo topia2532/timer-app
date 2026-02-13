@@ -2,173 +2,106 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<title>集結司令塔</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>同時ゴール司令塔</title>
 <style>
-body{font-family:sans-serif;background:#111;color:#eee;margin:0;padding:10px}
-h1{text-align:center;color:#6cf}
-.tabs{display:flex;margin-bottom:10px}
-.tab{flex:1;padding:10px;background:#222;text-align:center;cursor:pointer}
-.tab.active{background:#6cf;color:#000;font-weight:bold}
-.section{display:none}
-.section.active{display:block}
-input,select,button{margin:5px 0;padding:8px;width:100%;box-sizing:border-box}
-.person{display:flex;gap:5px}
-.person input{flex:1}
-.result{margin-top:10px;padding:10px;background:#222;border-radius:6px;white-space:pre-line}
-.timer{font-size:1.8em;text-align:center;margin-top:10px}
-.copyBtn{background:#28a;color:#fff;border:none;padding:10px;border-radius:4px;width:100%}
-.stopBtn{background:#a22;color:#fff;border:none;padding:10px;border-radius:4px;width:100%}
-.calcBtn{background:#444;color:#fff;border:none}
-.startBtn{background:#6cf;color:#000;border:none;font-weight:bold}
+body{
+  font-family:sans-serif;
+  text-align:center;
+  background:#111;
+  color:#fff;
+}
+input,button{
+  padding:8px;
+  margin:4px;
+  font-size:16px;
+}
+.section{
+  border:1px solid #444;
+  padding:15px;
+  margin:15px;
+  border-radius:10px;
+}
+.timer{
+  font-size:48px;
+  margin:15px;
+}
+.result{
+  margin-top:10px;
+  font-size:18px;
+  color:#7CFC00;
+}
 </style>
 </head>
 <body>
 
-<h1>同時ゴール司令塔</h1>
+<h1>🛰 集結司令塔</h1>
 
-<div class="tabs">
-  <div class="tab active" onclick="showTab(0)">🌍 UTC出発計算</div>
-  <div class="tab" onclick="showTab(1)">🟦 カウントダウン（近）</div>
-  <div class="tab" onclick="showTab(2)">🟥 カウントアップ（遠）</div>
-</div>
-
-<h2>参加者</h2>
-<div id="people"></div>
-<button onclick="addPerson()">参加者追加</button>
-
-<!-- 🌍 UTC -->
-<div class="section active">
-  <h3>到着UTC時刻（時:分）</h3>
-  <input type="time" id="goalHM">
-  <label>集結待機時間</label>
-  <select id="waitTime"></select>
-  <label>微調整</label>
-  <select id="adjustSec">
-    <option value="-5">-5秒</option>
-    <option value="0" selected>±0秒</option>
-    <option value="5">+5秒</option>
-  </select>
-  <button onclick="calcUTC()" class="calcBtn">計算</button>
-  <div id="utcResult" class="result"></div>
-</div>
-
-<!-- 🟦 CD -->
 <div class="section">
-  <button onclick="calcCD()" class="calcBtn">カウント計算</button>
-  <button onclick="startCD()" class="startBtn">カウント開始</button>
-  <button onclick="stopTimer()" class="stopBtn">停止</button>
-  <div id="cdTimer" class="timer"></div>
-  <div id="cdResult" class="result"></div>
+<h2>参加者時間入力（秒）</h2>
+<input type="number" id="timeInput" placeholder="移動時間(秒)">
+<button onclick="addTime()">追加</button>
+<p id="list"></p>
+
+<button onclick="calcUp()">カウントアップ計算</button>
+<button onclick="calcDown()">カウントダウン計算</button>
+
+<div class="result" id="calcResult"></div>
 </div>
 
-<!-- 🟥 CU -->
 <div class="section">
-  <button onclick="calcCU()" class="calcBtn">カウント計算</button>
-  <button onclick="startCU()" class="startBtn">開始</button>
-  <button onclick="stopTimer()" class="stopBtn">停止</button>
-  <div id="cuTimer" class="timer"></div>
-  <div id="cuResult" class="result"></div>
+<h2>カウントアップ</h2>
+<div class="timer" id="upTimer">-</div>
+<button onclick="startUp()">カウント開始</button>
+<button onclick="stopUp()">停止</button>
+</div>
+
+<div class="section">
+<h2>カウントダウン</h2>
+<div class="timer" id="downTimer">-</div>
+<button onclick="startDown()">開始</button>
+<button onclick="stopDown()">停止</button>
+</div>
+
+<div class="section">
+<h2>UTC出発計算</h2>
+<input type="number" id="year" placeholder="年">
+<input type="number" id="month" placeholder="月">
+<input type="number" id="day" placeholder="日"><br>
+<input type="number" id="hour" placeholder="時">
+<input type="number" id="minute" placeholder="分">
+<input type="number" id="second" placeholder="秒"><br>
+
+微調整:
+<button onclick="adjust(-1)">-1</button>
+<button onclick="adjust(1)">+1</button>
+<span id="adjustVal">0</span> 秒
+
+<br><br>
+<button onclick="calcUTC()">出発UTC計算</button>
+<div class="result" id="utcResult"></div>
 </div>
 
 <script>
-let timerInt=null,lastText="",cdCount=0,cuMax=0,cuData=[];
+let times=[];
+let upInterval=null;
+let downInterval=null;
+let upStartTimes=[];
+let maxUp=0;
+let adjustSec=0;
 
-function showTab(n){
- document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",i===n));
- document.querySelectorAll(".section").forEach((s,i)=>s.classList.toggle("active",i===n));
+function addTime(){
+  const val=parseInt(timeInput.value);
+  if(!isNaN(val)){
+    times.push(val);
+    list.innerText="参加者: "+times.join(", ");
+  }
 }
 
-function addPerson(){
- const d=document.createElement("div");
- d.className="person";
- d.innerHTML='<input placeholder="名前"><input type="number" placeholder="到達秒">';
- people.appendChild(d);
-}
-addPerson();
+function calcUp(){
+  if(times.length==0)return;
+  const max=Math.max(...times);
+  upStartTimes=times.map(t=>max-t+3);
+  maxUp=Math.max(...upStartTimes);
 
-function getData(){
- let arr=[];
- document.querySelectorAll(".person").forEach(p=>{
-  const n=p.children[0].value||"名無し";
-  const s=parseFloat(p.children[1].value);
-  if(!isNaN(s)) arr.push({name:n,time:s});
- });
- return arr;
-}
-
-function beep(){new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg").play();}
-function copyText(){navigator.clipboard.writeText(lastText);alert("コピー完了");}
-function stopTimer(){clearInterval(timerInt);}
-
-// 🌍 UTC
-for(let i=0;i<=60;i++){
- const o=document.createElement("option");
- o.value=i*60;
- o.textContent=i+"分";
- waitTime.appendChild(o);
-}
-function fmt(d){return d.toISOString().replace("T"," ").split(".")[0];}
-
-function calcUTC(){
- const hm=goalHM.value;if(!hm)return alert("時刻入力");
- const now=new Date();const [h,m]=hm.split(":").map(Number);
- const goalUTC=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),h,m,0));
- const wait=parseInt(waitTime.value);
- const adj=parseInt(adjustSec.value);
-
- let text=`【出発UTC時刻（集結時間含む）】\n到着予定:${fmt(goalUTC)} UTC\n集結:${waitTime.selectedOptions[0].text}\n微調整:${adj}秒\n\n`;
-
- getData().forEach(d=>{
-  const st=new Date(goalUTC.getTime()-(d.time+wait-adj)*1000);
-  text+=`${d.name} ▶ ${fmt(st)} UTC\n`;
- });
-
- lastText=text;
- utcResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
-}
-
-function calcCD(){
- const data=getData();if(data.length<2)return alert("2人以上");
- const min=Math.min(...data.map(d=>d.time));
- const max=Math.max(...data.map(d=>d.time));
- cdCount=(max-min)+3;
-
- let text=`【カウントダウン作戦】\n差:${max-min}秒 → カウント:${cdCount}秒\n\n`;
- data.forEach(d=>text+=`${d.name}：${d.time-min}秒で出発\n`);
-
- lastText=text;
- cdResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
-}
-
-function startCD(){
- if(cdCount<=0)return alert("先に計算");
- stopTimer();
- let c=cdCount;
- timerInt=setInterval(()=>{cdTimer.textContent=c;beep();c--;if(c<0)stopTimer();},1000);
-}
-
-function calcCU(){
- cuData=getData();if(cuData.length<2)return alert("2人以上");
- cuMax=Math.max(...cuData.map(d=>d.time));
-
- let text=`【カウントアップ作戦】カウントアップ${cuMax}秒\n\n`;
- cuData.forEach(d=>text+=`${d.name}：${cuMax-d.time}秒で出発\n`);
- lastText=text;
- cuResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
-}
-
-function startCU(){
- if(cuMax<=0)return alert("先に計算");
- stopTimer();
- let count=-3;
- timerInt=setInterval(()=>{
-  cuTimer.textContent=count;beep();
-  if(count>=cuMax){stopTimer();return;}
-  count++;
- },1000);
-}
-</script>
-
-</body>
-</html>
+  let txt=`カウントアップ ${ma
