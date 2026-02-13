@@ -11,7 +11,7 @@ body{
   background:#111;
   color:#fff;
 }
-input,button{
+input,button,select{
   padding:8px;
   margin:4px;
   font-size:16px;
@@ -65,19 +65,30 @@ input,button{
 
 <div class="section">
 <h2>UTC出発計算</h2>
-<input type="number" id="year" placeholder="年">
-<input type="number" id="month" placeholder="月">
-<input type="number" id="day" placeholder="日"><br>
-<input type="number" id="hour" placeholder="時">
-<input type="number" id="minute" placeholder="分">
-<input type="number" id="second" placeholder="秒"><br>
 
-微調整:
-<button onclick="adjust(-1)">-1</button>
-<button onclick="adjust(1)">+1</button>
-<span id="adjustVal">0</span> 秒
+<input type="number" id="hour" placeholder="時" min="0" max="23">
+<input type="number" id="minute" placeholder="分" min="0" max="59">
+<input type="number" id="second" placeholder="秒" min="0" max="59">
 
 <br><br>
+
+微調整:
+<select id="adjust">
+  <option value="-5">-5秒</option>
+  <option value="-4">-4秒</option>
+  <option value="-3">-3秒</option>
+  <option value="-2">-2秒</option>
+  <option value="-1">-1秒</option>
+  <option value="0" selected>±0秒</option>
+  <option value="1">+1秒</option>
+  <option value="2">+2秒</option>
+  <option value="3">+3秒</option>
+  <option value="4">+4秒</option>
+  <option value="5">+5秒</option>
+</select>
+
+<br><br>
+
 <button onclick="calcUTC()">出発UTC計算</button>
 <div class="result" id="utcResult"></div>
 </div>
@@ -88,7 +99,6 @@ let upInterval=null;
 let downInterval=null;
 let upStartTimes=[];
 let maxUp=0;
-let adjustSec=0;
 
 function addTime(){
   const val=parseInt(timeInput.value);
@@ -104,4 +114,71 @@ function calcUp(){
   upStartTimes=times.map(t=>max-t+3);
   maxUp=Math.max(...upStartTimes);
 
-  let txt=`カウントアップ ${ma
+  let txt=`カウントアップ ${maxUp} 秒\n`;
+  upStartTimes.forEach((t,i)=>{
+    txt+=`参加者${i+1}: ${t}秒\n`;
+  });
+  calcResult.innerText=txt;
+}
+
+function startUp(){
+  if(maxUp===0)return;
+  let t=-3;
+  clearInterval(upInterval);
+  upInterval=setInterval(()=>{
+    upTimer.innerText=t;
+    if(t>=maxUp){
+      clearInterval(upInterval);
+    }
+    t++;
+  },1000);
+}
+
+function stopUp(){
+  clearInterval(upInterval);
+  upTimer.innerText="-";
+}
+
+function calcDown(){
+  if(times.length==0)return;
+  const max=Math.max(...times);
+  downTimer.innerText=max;
+}
+
+function startDown(){
+  let t=parseInt(downTimer.innerText);
+  if(isNaN(t))return;
+  clearInterval(downInterval);
+  downInterval=setInterval(()=>{
+    downTimer.innerText=t;
+    if(t<=0) clearInterval(downInterval);
+    t--;
+  },1000);
+}
+
+function stopDown(){
+  clearInterval(downInterval);
+  downTimer.innerText="-";
+}
+
+function calcUTC(){
+  const h=parseInt(hour.value)||0;
+  const m=parseInt(minute.value)||0;
+  const s=parseInt(second.value)||0;
+  const adjust=parseInt(adjust.value)||0;
+
+  let total = h*3600 + m*60 + s + adjust;
+
+  if(total < 0) total = 0;
+  if(total >= 86400) total %= 86400;
+
+  const hh = String(Math.floor(total/3600)).padStart(2,'0');
+  const mm = String(Math.floor((total%3600)/60)).padStart(2,'0');
+  const ss = String(total%60).padStart(2,'0');
+
+  utcResult.innerText = "出発UTC: " + hh + ":" + mm + ":" + ss;
+}
+</script>
+
+</body>
+</html>
