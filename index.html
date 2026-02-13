@@ -101,12 +101,17 @@ let upTimes=[],downTimes=[];
 let upInterval,downInterval;
 
 function add(){
- const n=name.value||("参加者"+(members.length+1));
- const t=parseInt(time.value);
+ const n = document.getElementById("name").value || ("参加者"+(members.length+1));
+ const t = parseInt(document.getElementById("time").value);
+
  if(!isNaN(t)){
    members.push({name:n,time:t});
    members.sort((a,b)=>a.time-b.time);
-   membersDisplay();
+
+   document.getElementById("members").innerText =
+     members.map(m=>m.name+"("+m.time+"s)").join(" / ");
+document.getElementById("name").value="";
+document.getElementById("time").value="";
  }
 }
 
@@ -199,3 +204,4 @@ function copyResult(id){
 </script>
 </body>
 </html>
+
