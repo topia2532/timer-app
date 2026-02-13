@@ -126,12 +126,33 @@ function showTab(id){
  event.target.classList.add('active');
 }
 
-function calcUp(){
- const max=Math.max(...members.map(m=>m.time));
- upTimes=members.map(m=>({name:m.name,start:max-m.time+3}));
- let text="カウントアップ\n";
- upTimes.forEach(p=>text+=`${p.name}: ${p.start}秒\n`);
- document.getElementById("upResult").innerText=text;
+function calcUTC(){
+ if(members.length===0)return;
+
+ const hour = parseInt(document.getElementById("h").value) || 0;
+ const minute = parseInt(document.getElementById("m").value) || 0;
+ const second = parseInt(document.getElementById("s").value) || 0;
+ const adj = parseInt(document.getElementById("adj").value) || 0;
+
+ let goal = hour*3600 + minute*60 + second + adj;
+
+ if(goal < 0) goal = 0;
+ if(goal >= 86400) goal %= 86400;
+
+ let text = "出発UTC\n";
+
+ members.forEach(mem=>{
+   let depart = goal - mem.time;
+   if(depart < 0) depart += 86400;
+
+   const hh = String(Math.floor(depart/3600)).padStart(2,'0');
+   const mm = String(Math.floor((depart%3600)/60)).padStart(2,'0');
+   const ss = String(depart%60).padStart(2,'0');
+
+   text += `${mem.name}: ${hh}:${mm}:${ss}\n`;
+ });
+
+ document.getElementById("utcResult").innerText = text;
 }
 
 function startUp(){
@@ -146,13 +167,23 @@ function startUp(){
 }
 
 function calcDown(){
- const min=Math.min(...members.map(m=>m.time));
- downTimes=members.map(m=>({name:m.name,start:m.time-min}));
- let max=Math.max(...downTimes.map(p=>p.start));
- document.getElementById("downTimer").innerText=max+3;
- let text="カウントダウン\n";
- downTimes.forEach(p=>text+=`${p.name}: ${p.start}秒\n`);
- document.getElementById("downResult").innerText=text;
+ if(members.length===0) return;
+
+ const min = Math.min(...members.map(m=>m.time));
+ downTimes = members.map(m=>({name:m.name,start:m.time-min}));
+
+ const max = Math.max(...downTimes.map(p=>p.start));
+ const countdownTotal = max + 3;
+
+ document.getElementById("downTimer").innerText = countdownTotal;
+
+ let text = `カウントダウン ${countdownTotal} 秒\n`;
+
+ downTimes.forEach(p=>{
+   text += `${p.name}: ${p.start}秒\n`;
+ });
+
+ document.getElementById("downResult").innerText = text;
 }
 
 function startDown(){
@@ -204,5 +235,6 @@ function copyResult(id){
 </script>
 </body>
 </html>
+
 
 
