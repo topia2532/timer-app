@@ -2,174 +2,200 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>集結司令塔</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{font-family:sans-serif;background:#111;color:#eee;margin:0;padding:10px}
-h1{text-align:center;color:#6cf}
-.tabs{display:flex;margin-bottom:10px}
-.tab{flex:1;padding:10px;background:#222;text-align:center;cursor:pointer}
-.tab.active{background:#6cf;color:#000;font-weight:bold}
-.section{display:none}
-.section.active{display:block}
-input,select,button{margin:5px 0;padding:8px;width:100%;box-sizing:border-box}
-.person{display:flex;gap:5px}
-.person input{flex:1}
-.result{margin-top:10px;padding:10px;background:#222;border-radius:6px;white-space:pre-line}
-.timer{font-size:1.8em;text-align:center;margin-top:10px}
-.copyBtn{background:#28a;color:#fff;border:none;padding:10px;border-radius:4px;width:100%}
-.stopBtn{background:#a22;color:#fff;border:none;padding:10px;border-radius:4px;width:100%}
-.calcBtn{background:#444;color:#fff;border:none}
-.startBtn{background:#6cf;color:#000;border:none;font-weight:bold}
+body{
+  font-family:sans-serif;
+  background:#111;
+  color:#fff;
+  text-align:center;
+}
+.tab button{
+  padding:10px;
+  margin:3px;
+  font-size:14px;
+  border:none;
+  border-radius:6px;
+}
+.active{background:#0af;color:#fff;}
+.section{display:none;margin-top:15px;}
+.timer{font-size:48px;margin:10px;}
+.result{white-space:pre-line;color:#7CFC00;margin-top:10px;}
+input,button,select{
+  padding:8px;
+  margin:4px;
+  font-size:16px;
+}
 </style>
 </head>
 <body>
 
-<h1>集結司令塔</h1>
+<h1>🛰 集結司令塔</h1>
 
-<div class="tabs">
-  <div class="tab active" onclick="showTab(0)">🌍 UTC出発計算</div>
-  <div class="tab" onclick="showTab(1)">🟦 カウントダウン（近）</div>
-  <div class="tab" onclick="showTab(2)">🟥 カウントアップ（遠）</div>
+<h3>参加者と移動時間（秒）</h3>
+<input id="name" placeholder="名前">
+<input id="time" type="number" placeholder="秒">
+<button onclick="add()">追加</button>
+<p id="members"></p>
+
+<div class="tab">
+<button onclick="showTab('up')" class="active">🟥 カウントアップ</button>
+<button onclick="showTab('down')">🟦 カウントダウン</button>
+<button onclick="showTab('utc')">🌍 UTC出発計算</button>
 </div>
 
-<h2>参加者</h2>
-<div id="people"></div>
-<button onclick="addPerson()">参加者追加</button>
-
-<!-- 🌍 UTC -->
-<div class="section active">
-  <h3>到着UTC時刻（時:分）</h3>
-  <input type="time" id="goalHM">
-  <label>集結待機時間</label>
-  <select id="waitTime"></select>
-  <label>微調整</label>
-  <select id="adjustSec">
-    <option value="-5">-5秒</option>
-    <option value="0" selected>±0秒</option>
-    <option value="5">+5秒</option>
-  </select>
-  <button onclick="calcUTC()" class="calcBtn">計算</button>
-  <div id="utcResult" class="result"></div>
+<div id="up" class="section" style="display:block;">
+<h2>カウントアップ（遠）</h2>
+<button onclick="calcUp()">計算</button>
+<div class="timer" id="upTimer">-</div>
+<button onclick="startUp()">開始</button>
+<button onclick="stopAll()">停止</button>
+<div class="result" id="upResult"></div>
+<button onclick="copyResult('upResult')">結果コピー</button>
 </div>
 
-<!-- 🟦 CD -->
-<div class="section">
-  <button onclick="calcCD()" class="calcBtn">カウント計算</button>
-  <button onclick="startCD()" class="startBtn">カウント開始</button>
-  <button onclick="stopTimer()" class="stopBtn">停止</button>
-  <div id="cdTimer" class="timer"></div>
-  <div id="cdResult" class="result"></div>
+<div id="down" class="section">
+<h2>カウントダウン（近）</h2>
+<button onclick="calcDown()">計算</button>
+<div class="timer" id="downTimer">-</div>
+<button onclick="startDown()">開始</button>
+<button onclick="stopAll()">停止</button>
+<div class="result" id="downResult"></div>
+<button onclick="copyResult('downResult')">結果コピー</button>
 </div>
 
-<!-- 🟥 CU -->
-<div class="section">
-  <button onclick="calcCU()" class="calcBtn">カウント計算</button>
-  <button onclick="startCU()" class="startBtn">開始</button>
-  <button onclick="stopTimer()" class="stopBtn">停止</button>
-  <div id="cuTimer" class="timer"></div>
-  <div id="cuResult" class="result"></div>
+<div id="utc" class="section">
+<h2>UTC出発計算</h2>
+
+到着UTC:
+<input type="number" id="h" min="0" max="23" placeholder="時">
+<input type="number" id="m" min="0" max="59" placeholder="分">
+<input type="number" id="s" min="0" max="59" placeholder="秒">
+
+<br><br>
+微調整:
+<select id="adj">
+<option value="-5">-5</option>
+<option value="-4">-4</option>
+<option value="-3">-3</option>
+<option value="-2">-2</option>
+<option value="-1">-1</option>
+<option value="0" selected>0</option>
+<option value="1">+1</option>
+<option value="2">+2</option>
+<option value="3">+3</option>
+<option value="4">+4</option>
+<option value="5">+5</option>
+</select>
+
+<br><br>
+<button onclick="calcUTC()">計算</button>
+<div class="result" id="utcResult"></div>
+<button onclick="copyResult('utcResult')">結果コピー</button>
 </div>
 
 <script>
-let timerInt=null,lastText="",cdCount=0,cuMax=0,cuData=[];
+let members=[];
+let upTimes=[],downTimes=[];
+let upInterval,downInterval;
 
-function showTab(n){
- document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",i===n));
- document.querySelectorAll(".section").forEach((s,i)=>s.classList.toggle("active",i===n));
+function add(){
+ const n=name.value||("参加者"+(members.length+1));
+ const t=parseInt(time.value);
+ if(!isNaN(t)){
+   members.push({name:n,time:t});
+   members.sort((a,b)=>a.time-b.time);
+   membersDisplay();
+ }
 }
 
-function addPerson(){
- const d=document.createElement("div");
- d.className="person";
- d.innerHTML='<input placeholder="名前"><input type="number" placeholder="到達秒">';
- people.appendChild(d);
-}
-addPerson();
-
-function getData(){
- let arr=[];
- document.querySelectorAll(".person").forEach(p=>{
-  const n=p.children[0].value||"名無し";
-  const s=parseFloat(p.children[1].value);
-  if(!isNaN(s)) arr.push({name:n,time:s});
- });
- return arr;
+function membersDisplay(){
+ members.innerText=members.map(m=>m.name+"("+m.time+"s)").join(" / ");
 }
 
-function beep(){new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg").play();}
-function copyText(){navigator.clipboard.writeText(lastText);alert("コピー完了");}
-function stopTimer(){clearInterval(timerInt);}
-
-// 🌍 UTC
-for(let i=0;i<=60;i++){
- const o=document.createElement("option");
- o.value=i*60;
- o.textContent=i+"分";
- waitTime.appendChild(o);
-}
-function fmt(d){return d.toISOString().replace("T"," ").split(".")[0];}
-
-function calcUTC(){
- const hm=goalHM.value;if(!hm)return alert("時刻入力");
- const now=new Date();const [h,m]=hm.split(":").map(Number);
- const goalUTC=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),h,m,0));
- const wait=parseInt(waitTime.value);
- const adj=parseInt(adjustSec.value);
-
- let text=`【出発UTC時刻（集結時間含む）】\n到着予定:${fmt(goalUTC)} UTC\n集結:${waitTime.selectedOptions[0].text}\n微調整:${adj}秒\n\n`;
-
- getData().forEach(d=>{
-  const st=new Date(goalUTC.getTime()-(d.time+wait-adj)*1000);
-  text+=`${d.name} ▶ ${fmt(st)} UTC\n`;
- });
-
- lastText=text;
- utcResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
+function showTab(id){
+ document.querySelectorAll('.section').forEach(s=>s.style.display="none");
+ document.getElementById(id).style.display="block";
+ document.querySelectorAll('.tab button').forEach(b=>b.classList.remove('active'));
+ event.target.classList.add('active');
 }
 
-function calcCD(){
- const data=getData();if(data.length<2)return alert("2人以上");
- const min=Math.min(...data.map(d=>d.time));
- const max=Math.max(...data.map(d=>d.time));
- cdCount=(max-min)+3;
-
- let text=`【カウントダウン作戦】\n差:${max-min}秒 → カウント:${cdCount}秒\n\n`;
- data.forEach(d=>text+=`${d.name}：${d.time-min}秒で出発\n`);
-
- lastText=text;
- cdResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
+function calcUp(){
+ const max=Math.max(...members.map(m=>m.time));
+ upTimes=members.map(m=>({name:m.name,start:max-m.time+3}));
+ let text="カウントアップ\n";
+ upTimes.forEach(p=>text+=`${p.name}: ${p.start}秒\n`);
+ document.getElementById("upResult").innerText=text;
 }
 
-function startCD(){
- if(cdCount<=0)return alert("先に計算");
- stopTimer();
- let c=cdCount;
- timerInt=setInterval(()=>{cdTimer.textContent=c;beep();c--;if(c<0)stopTimer();},1000);
-}
-
-function calcCU(){
- cuData=getData();if(cuData.length<2)return alert("2人以上");
- cuMax=Math.max(...cuData.map(d=>d.time));
-
- let text=`【カウントアップ作戦】カウントアップ${cuMax}秒\n\n`;
- cuData.forEach(d=>text+=`${d.name}：${cuMax-d.time}秒で出発\n`);
- lastText=text;
- cuResult.innerHTML=text+'<button class="copyBtn" onclick="copyText()">結果コピー</button>';
-}
-
-function startCU(){
- if(cuMax<=0)return alert("先に計算");
- stopTimer();
- let count=-3;
- timerInt=setInterval(()=>{
-  cuTimer.textContent=count;beep();
-  if(count>=cuMax){stopTimer();return;}
-  count++;
+function startUp(){
+ let t=-3;
+ const end=Math.max(...upTimes.map(p=>p.start));
+ clearInterval(upInterval);
+ upInterval=setInterval(()=>{
+   upTimer.innerText=t;
+   if(t>=end) clearInterval(upInterval);
+   t++;
  },1000);
 }
-</script>
 
+function calcDown(){
+ const min=Math.min(...members.map(m=>m.time));
+ downTimes=members.map(m=>({name:m.name,start:m.time-min}));
+ let max=Math.max(...downTimes.map(p=>p.start));
+ document.getElementById("downTimer").innerText=max+3;
+ let text="カウントダウン\n";
+ downTimes.forEach(p=>text+=`${p.name}: ${p.start}秒\n`);
+ document.getElementById("downResult").innerText=text;
+}
+
+function startDown(){
+ let t=parseInt(downTimer.innerText);
+ clearInterval(downInterval);
+ downInterval=setInterval(()=>{
+   downTimer.innerText=t;
+   if(t<=0) clearInterval(downInterval);
+   t--;
+ },1000);
+}
+
+function calcUTC(){
+ if(members.length===0)return;
+ const h=parseInt(h.value)||0;
+ const m=parseInt(m.value)||0;
+ const s=parseInt(s.value)||0;
+ const adj=parseInt(adj.value)||0;
+
+ let goal=h*3600+m*60+s+adj;
+ if(goal<0)goal=0;
+ if(goal>=86400)goal%=86400;
+
+ let text="出発UTC\n";
+
+ members.forEach(mem=>{
+   let depart=goal-mem.time;
+   if(depart<0) depart+=86400;
+   const hh=String(Math.floor(depart/3600)).padStart(2,'0');
+   const mm=String(Math.floor((depart%3600)/60)).padStart(2,'0');
+   const ss=String(depart%60).padStart(2,'0');
+   text+=`${mem.name}: ${hh}:${mm}:${ss}\n`;
+ });
+
+ document.getElementById("utcResult").innerText=text;
+}
+
+function stopAll(){
+ clearInterval(upInterval);
+ clearInterval(downInterval);
+ upTimer.innerText="-";
+ downTimer.innerText="-";
+}
+
+function copyResult(id){
+ navigator.clipboard.writeText(document.getElementById(id).innerText);
+ alert("コピーしました");
+}
+</script>
 </body>
 </html>
-
