@@ -110,11 +110,11 @@ function add(){
 
    document.getElementById("members").innerText =
      members.map(m=>m.name+"("+m.time+"s)").join(" / ");
-document.getElementById("name").value="";
-document.getElementById("time").value="";
  }
 }
-
+document.getElementById("name").value="";
+document.getElementById("time").value="";
+  
 function membersDisplay(){
  members.innerText=members.map(m=>m.name+"("+m.time+"s)").join(" / ");
 }
@@ -204,4 +204,5 @@ function copyResult(id){
 </script>
 </body>
 </html>
+
 
