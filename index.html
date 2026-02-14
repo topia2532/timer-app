@@ -115,15 +115,11 @@ function add(){
 document.getElementById("name").value="";
 document.getElementById("time").value="";
   
-function membersDisplay(){
- members.innerText=members.map(m=>m.name+"("+m.time+"s)").join(" / ");
-}
-
 function showTab(id){
  document.querySelectorAll('.section').forEach(s=>s.style.display="none");
  document.getElementById(id).style.display="block";
  document.querySelectorAll('.tab button').forEach(b=>b.classList.remove('active'));
- event.target.classList.add('active');
+ event.currentTarget.classList.add('active');
 }
 
 function calcUTC(){
@@ -196,31 +192,6 @@ function startDown(){
  },1000);
 }
 
-function calcUTC(){
- if(members.length===0)return;
- const h=parseInt(h.value)||0;
- const m=parseInt(m.value)||0;
- const s=parseInt(s.value)||0;
- const adj=parseInt(adj.value)||0;
-
- let goal=h*3600+m*60+s+adj;
- if(goal<0)goal=0;
- if(goal>=86400)goal%=86400;
-
- let text="出発UTC\n";
-
- members.forEach(mem=>{
-   let depart=goal-mem.time;
-   if(depart<0) depart+=86400;
-   const hh=String(Math.floor(depart/3600)).padStart(2,'0');
-   const mm=String(Math.floor((depart%3600)/60)).padStart(2,'0');
-   const ss=String(depart%60).padStart(2,'0');
-   text+=`${mem.name}: ${hh}:${mm}:${ss}\n`;
- });
-
- document.getElementById("utcResult").innerText=text;
-}
-
 function stopAll(){
  clearInterval(upInterval);
  clearInterval(downInterval);
@@ -235,6 +206,7 @@ function copyResult(id){
 </script>
 </body>
 </html>
+
 
 
 
