@@ -67,6 +67,15 @@ input,button,select{
 
 <div id="utc" class="section">
 <h2>UTC出発計算</h2>
+  
+<label>移動時間（秒）</label>
+<input id="travelTime" type="number">
+
+<label>待機時間（分）</label>
+<input id="wait" type="number" min="0" max="60" value="0">
+
+<label>微調整（秒）</label>
+<select id="adjust">
 
 到着UTC:
 <input type="number" id="h" min="0" max="23" placeholder="時">
@@ -123,32 +132,32 @@ function showTab(id){
 }
 
 function calcUTC(){
- if(members.length===0)return;
+ if(members.length===0) return;
 
  const hour = parseInt(document.getElementById("h").value) || 0;
- const minute = parseInt(document.getElementById("m").value) || 0;
- const second = parseInt(document.getElementById("s").value) || 0;
- const adj = parseInt(document.getElementById("adj").value) || 0;
+ const min  = parseInt(document.getElementById("m").value) || 0;
+ const sec  = parseInt(document.getElementById("s").value) || 0;
+ const wait = parseInt(document.getElementById("wait").value) || 0;
+ const adj  = parseInt(document.getElementById("adj").value) || 0;
 
- let goal = hour*3600 + minute*60 + second + adj;
+ const now = new Date();
 
- if(goal < 0) goal = 0;
- if(goal >= 86400) goal %= 86400;
+ let target = new Date(now);
+ target.setHours(hour, min, sec, 0);
 
- let text = "出発UTC\n";
+ // すでに過ぎていたら翌日
+ if(target < now) target.setDate(target.getDate()+1);
 
- members.forEach(mem=>{
-   let depart = goal - mem.time;
-   if(depart < 0) depart += 86400;
+ // 待機時間追加
+ target.setMinutes(target.getMinutes() + wait);
 
-   const hh = String(Math.floor(depart/3600)).padStart(2,'0');
-   const mm = String(Math.floor((depart%3600)/60)).padStart(2,'0');
-   const ss = String(depart%60).padStart(2,'0');
+ // 微調整秒
+ target.setSeconds(target.getSeconds() + adj);
 
-   text += `${mem.name}: ${hh}:${mm}:${ss}\n`;
- });
+ const diff = Math.floor((target - now)/1000);
 
- document.getElementById("utcResult").innerText = text;
+ document.getElementById("result").innerText =
+  `UTC出発時刻\n${target.toTimeString().split(' ')[0]}\n\n出発まで ${diff} 秒`;
 }
 
 function startUp(){
@@ -162,6 +171,17 @@ function startUp(){
  },1000);
 }
 
+function calcUp(){
+ if(members.length===0) return;
+
+ const result = members.map(m => `${m.name} +${m.time}秒`).join('\n');
+
+ const total = members.reduce((sum,m)=>sum+m.time,0);
+
+ document.getElementById("result").innerText =
+  `カウントアップ\n合計 ${total} 秒\n\n${result}`;
+}
+  
 function calcDown(){
  if(members.length===0) return;
 
@@ -206,6 +226,7 @@ function copyResult(id){
 </script>
 </body>
 </html>
+
 
 
 
