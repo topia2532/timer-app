@@ -11,21 +11,29 @@ body{
   color:#fff;
   text-align:center;
 }
-.tab button{
-  padding:10px;
-  margin:3px;
-  font-size:14px;
+
+/* 📱 スマホ向け巨大ボタン */
+button{
+  padding:16px 22px;
+  margin:6px;
+  font-size:18px;
   border:none;
-  border-radius:6px;
+  border-radius:10px;
 }
+
+.tab button{
+  font-size:16px;
+}
+
 .active{background:#0af;color:#fff;}
 .section{display:none;margin-top:15px;}
-.timer{font-size:48px;margin:10px;}
+.timer{font-size:64px;margin:15px;}
 .result{white-space:pre-line;color:#7CFC00;margin-top:10px;}
-input,button,select{
-  padding:8px;
+input,select{
+  padding:10px;
   margin:4px;
-  font-size:16px;
+  font-size:18px;
+  border-radius:6px;
 }
 </style>
 </head>
@@ -46,7 +54,7 @@ input,button,select{
 </div>
 
 <div id="up" class="section" style="display:block;">
-<h2>カウントアップ（遠い人基準）</h2>
+<h2>カウントアップ</h2>
 <button onclick="calcUp()">計算</button>
 <div class="timer" id="upTimer">-</div>
 <button onclick="startUp()">開始</button>
@@ -56,7 +64,7 @@ input,button,select{
 </div>
 
 <div id="down" class="section">
-<h2>カウントダウン（近い人基準）</h2>
+<h2>カウントダウン</h2>
 <button onclick="calcDown()">計算</button>
 <div class="timer" id="downTimer">-</div>
 <button onclick="startDown()">開始</button>
@@ -80,22 +88,6 @@ input,button,select{
 
 <br><br>
 
-微調整（秒）:
-<select id="adj">
-<option value="-5">-5</option>
-<option value="-4">-4</option>
-<option value="-3">-3</option>
-<option value="-2">-2</option>
-<option value="-1">-1</option>
-<option value="0" selected>0</option>
-<option value="1">+1</option>
-<option value="2">+2</option>
-<option value="3">+3</option>
-<option value="4">+4</option>
-<option value="5">+5</option>
-</select>
-
-<br><br>
 <button onclick="calcUTC()">計算</button>
 <div class="result" id="utcResult"></div>
 <button onclick="copyResult('utcResult')">結果コピー</button>
@@ -106,6 +98,20 @@ let members=[];
 let upTimes=[],downTimes=[];
 let upInterval,downInterval;
 
+/* 🔊 音 */
+function beep(freq=880,duration=120){
+ const ctx=new (window.AudioContext||window.webkitAudioContext)();
+ const osc=ctx.createOscillator();
+ const gain=ctx.createGain();
+ osc.connect(gain);
+ gain.connect(ctx.destination);
+ osc.frequency.value=freq;
+ osc.start();
+ gain.gain.setValueAtTime(0.2,ctx.currentTime);
+ osc.stop(ctx.currentTime+duration/1000);
+}
+
+/* 参加者追加 */
 function add(){
  const n=document.getElementById("name").value || ("参加者"+(members.length+1));
  const t=parseInt(document.getElementById("time").value);
@@ -117,6 +123,7 @@ function add(){
  }
 }
 
+/* タブ切替 */
 function showTab(id){
  document.querySelectorAll('.section').forEach(s=>s.style.display="none");
  document.getElementById(id).style.display="block";
@@ -124,11 +131,11 @@ function showTab(id){
  event.target.classList.add('active');
 }
 
+/* 🟥 カウントアップ */
 function calcUp(){
  if(members.length===0)return;
  const max=Math.max(...members.map(m=>m.time));
  upTimes=members.map(m=>({name:m.name,start:max-m.time}));
- document.getElementById("upTimer").innerText="-";
  let text="準備3秒 → 出発\n";
  upTimes.forEach(p=>text+=`${p.name}: ${p.start}秒\n`);
  document.getElementById("upResult").innerText=text;
@@ -140,19 +147,21 @@ function startUp(){
  clearInterval(upInterval);
  upInterval=setInterval(()=>{
    upTimer.innerText=t;
-   if(t>=end) clearInterval(upInterval);
+   beep(600,80);
+   if(t>=end){ beep(1200,300); clearInterval(upInterval); }
    t++;
  },1000);
 }
 
+/* 🟦 カウントダウン */
 function calcDown(){
  if(members.length===0)return;
  const min=Math.min(...members.map(m=>m.time));
  downTimes=members.map(m=>({name:m.name,start:m.time-min}));
  const max=Math.max(...downTimes.map(p=>p.start));
  const total=max+3;
- document.getElementById("downTimer").innerText=total;
- let text=`${total}秒後に集合\n`;
+ downTimer.innerText=total;
+ let text=`カウントダウン ${total} 秒\n`;
  downTimes.forEach(p=>text+=`${p.name}: ${p.start}秒\n`);
  document.getElementById("downResult").innerText=text;
 }
@@ -162,11 +171,15 @@ function startDown(){
  clearInterval(downInterval);
  downInterval=setInterval(()=>{
    downTimer.innerText=t;
-   if(t<=0) clearInterval(downInterval);
+   beep(600,80);
+   if(t<=0){ beep(1200,300); clearInterval(downInterval); }
    t--;
  },1000);
 }
 
+/* 🌍 UTC計算
+   移動時間＋待機時間＝到着時刻
+*/
 function calcUTC(){
  if(members.length===0)return;
 
@@ -174,16 +187,14 @@ function calcUTC(){
  const m=parseInt(document.getElementById("m").value)||0;
  const s=parseInt(document.getElementById("s").value)||0;
  const wait=parseInt(document.getElementById("wait").value)||0;
- const adj=parseInt(document.getElementById("adj").value)||0;
 
- let goal=h*3600+m*60+s + wait*60 + adj;
- goal=(goal+86400)%86400;
+ let arrival=h*3600+m*60+s;
 
  let text="出発UTC\n";
 
  members.forEach(mem=>{
-   let depart=goal-mem.time;
-   if(depart<0) depart+=86400;
+   let depart=arrival-(mem.time+wait*60);
+   depart=(depart+86400)%86400;
 
    const hh=String(Math.floor(depart/3600)).padStart(2,'0');
    const mm=String(Math.floor((depart%3600)/60)).padStart(2,'0');
@@ -195,6 +206,7 @@ function calcUTC(){
  document.getElementById("utcResult").innerText=text;
 }
 
+/* 停止 */
 function stopAll(){
  clearInterval(upInterval);
  clearInterval(downInterval);
@@ -202,6 +214,7 @@ function stopAll(){
  downTimer.innerText="-";
 }
 
+/* コピー */
 function copyResult(id){
  navigator.clipboard.writeText(document.getElementById(id).innerText);
  alert("コピーしました");
