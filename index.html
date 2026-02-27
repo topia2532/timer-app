@@ -11,8 +11,6 @@ body{
   color:#fff;
   text-align:center;
 }
-
-/* 📱 スマホ向け巨大ボタン */
 button{
   padding:16px 22px;
   margin:6px;
@@ -20,20 +18,19 @@ button{
   border:none;
   border-radius:10px;
 }
-
-.tab button{
+input{
+  padding:8px;
   font-size:16px;
 }
-
-.active{background:#0af;color:#fff;}
-.section{display:none;margin-top:15px;}
 .timer{font-size:64px;margin:15px;}
 .result{white-space:pre-line;color:#7CFC00;margin-top:10px;}
-input,select{
-  padding:10px;
+.section{display:none;margin-top:15px;}
+.active{background:#0af;color:#fff;}
+.memberRow{
+  display:flex;
+  justify-content:center;
+  gap:6px;
   margin:4px;
-  font-size:18px;
-  border-radius:6px;
 }
 </style>
 </head>
@@ -41,11 +38,9 @@ input,select{
 
 <h1>🛰 集結司令塔</h1>
 
-<h3>参加者と移動時間（秒）</h3>
-<input id="name" placeholder="名前">
-<input id="time" type="number" placeholder="秒">
-<button onclick="add()">追加</button>
-<p id="members"></p>
+<h3>参加者</h3>
+<div id="memberList"></div>
+<button onclick="addRow()">＋参加者追加</button>
 
 <div class="tab">
 <button onclick="showTab('up')" class="active">🟥 カウントアップ</button>
@@ -77,29 +72,25 @@ input,select{
 <h2>UTC出発計算</h2>
 
 到着UTC:
-<input type="number" id="h" min="0" max="23" placeholder="時">
-<input type="number" id="m" min="0" max="59" placeholder="分">
-<input type="number" id="s" min="0" max="59" placeholder="秒">
+<input type="number" id="h" placeholder="時">
+<input type="number" id="m" placeholder="分">
+<input type="number" id="s" placeholder="秒">
 
 <br><br>
-
 待機時間（分）:
 <input type="number" id="wait" min="0" max="60" value="0">
 
 <br><br>
-
 <button onclick="calcUTC()">計算</button>
 <div class="result" id="utcResult"></div>
 <button onclick="copyResult('utcResult')">結果コピー</button>
 </div>
 
 <script>
-let members=[];
-let upTimes=[],downTimes=[];
-let upInterval,downInterval;
+let upInterval, downInterval;
 
 /* 🔊 音 */
-function beep(freq=880,duration=120){
+function beep(freq=800,duration=100){
  const ctx=new (window.AudioContext||window.webkitAudioContext)();
  const osc=ctx.createOscillator();
  const gain=ctx.createGain();
@@ -111,19 +102,37 @@ function beep(freq=880,duration=120){
  osc.stop(ctx.currentTime+duration/1000);
 }
 
-/* 参加者追加 */
-function add(){
- const n=document.getElementById("name").value || ("参加者"+(members.length+1));
- const t=parseInt(document.getElementById("time").value);
- if(!isNaN(t)){
-   members.push({name:n,time:t});
-   members.sort((a,b)=>a.time-b.time);
-   document.getElementById("members").innerText =
-     members.map(m=>m.name+"("+m.time+"s)").join(" / ");
- }
+/* 行追加 */
+function addRow(name="",time=""){
+ const row=document.createElement("div");
+ row.className="memberRow";
+ row.innerHTML=`
+   <input type="checkbox" checked>
+   <input placeholder="名前" value="${name}">
+   <input type="number" placeholder="秒" value="${time}">
+ `;
+ document.getElementById("memberList").appendChild(row);
 }
 
-/* タブ切替 */
+/* 初期行 */
+addRow();
+
+/* 選択された参加者取得 */
+function getMembers(){
+ const rows=document.querySelectorAll(".memberRow");
+ let list=[];
+ rows.forEach(r=>{
+   const checked=r.children[0].checked;
+   const name=r.children[1].value || "参加者";
+   const time=parseInt(r.children[2].value);
+   if(checked && !isNaN(time)){
+     list.push({name,time});
+   }
+ });
+ return list;
+}
+
+/* タブ */
 function showTab(id){
  document.querySelectorAll('.section').forEach(s=>s.style.display="none");
  document.getElementById(id).style.display="block";
@@ -132,13 +141,15 @@ function showTab(id){
 }
 
 /* 🟥 カウントアップ */
+let upTimes=[];
 function calcUp(){
+ const members=getMembers();
  if(members.length===0)return;
  const max=Math.max(...members.map(m=>m.time));
  upTimes=members.map(m=>({name:m.name,start:max-m.time}));
  let text="準備3秒 → 出発\n";
  upTimes.forEach(p=>text+=`${p.name}: ${p.start}秒\n`);
- document.getElementById("upResult").innerText=text;
+ upResult.innerText=text;
 }
 
 function startUp(){
@@ -147,14 +158,16 @@ function startUp(){
  clearInterval(upInterval);
  upInterval=setInterval(()=>{
    upTimer.innerText=t;
-   beep(600,80);
-   if(t>=end){ beep(1200,300); clearInterval(upInterval); }
+   beep();
+   if(t>=end){ beep(1200,300); clearInterval(upInterval);}
    t++;
  },1000);
 }
 
 /* 🟦 カウントダウン */
+let downTimes=[];
 function calcDown(){
+ const members=getMembers();
  if(members.length===0)return;
  const min=Math.min(...members.map(m=>m.time));
  downTimes=members.map(m=>({name:m.name,start:m.time-min}));
@@ -163,7 +176,7 @@ function calcDown(){
  downTimer.innerText=total;
  let text=`カウントダウン ${total} 秒\n`;
  downTimes.forEach(p=>text+=`${p.name}: ${p.start}秒\n`);
- document.getElementById("downResult").innerText=text;
+ downResult.innerText=text;
 }
 
 function startDown(){
@@ -171,39 +184,34 @@ function startDown(){
  clearInterval(downInterval);
  downInterval=setInterval(()=>{
    downTimer.innerText=t;
-   beep(600,80);
-   if(t<=0){ beep(1200,300); clearInterval(downInterval); }
+   beep();
+   if(t<=0){ beep(1200,300); clearInterval(downInterval);}
    t--;
  },1000);
 }
 
-/* 🌍 UTC計算
-   移動時間＋待機時間＝到着時刻
-*/
+/* 🌍 UTC */
 function calcUTC(){
+ const members=getMembers();
  if(members.length===0)return;
 
- const h=parseInt(document.getElementById("h").value)||0;
- const m=parseInt(document.getElementById("m").value)||0;
- const s=parseInt(document.getElementById("s").value)||0;
- const wait=parseInt(document.getElementById("wait").value)||0;
+ const h=parseInt(h.value)||0;
+ const m=parseInt(m.value)||0;
+ const s=parseInt(s.value)||0;
+ const wait=parseInt(wait.value)||0;
 
- let arrival=h*3600+m*60+s;
+ const arrival=h*3600+m*60+s;
 
  let text="出発UTC\n";
-
  members.forEach(mem=>{
    let depart=arrival-(mem.time+wait*60);
    depart=(depart+86400)%86400;
-
    const hh=String(Math.floor(depart/3600)).padStart(2,'0');
    const mm=String(Math.floor((depart%3600)/60)).padStart(2,'0');
    const ss=String(depart%60).padStart(2,'0');
-
    text+=`${mem.name}: ${hh}:${mm}:${ss}\n`;
  });
-
- document.getElementById("utcResult").innerText=text;
+ utcResult.innerText=text;
 }
 
 /* 停止 */
