@@ -11,6 +11,8 @@ body{
   color:#fff;
   text-align:center;
 }
+
+/* 📱 指操作しやすいボタン */
 button{
   padding:16px 22px;
   margin:6px;
@@ -18,20 +20,67 @@ button{
   border:none;
   border-radius:10px;
 }
+
 input{
-  padding:8px;
+  padding:10px;
   font-size:16px;
+  border-radius:8px;
+  border:none;
 }
-.timer{font-size:64px;margin:15px;}
-.result{white-space:pre-line;color:#7CFC00;margin-top:10px;}
-.section{display:none;margin-top:15px;}
-.active{background:#0af;color:#fff;}
+
+/* ✅ 参加者行 */
 .memberRow{
   display:flex;
+  align-items:center;
   justify-content:center;
-  gap:6px;
-  margin:4px;
+  gap:8px;
+  margin:8px auto;
+  flex-wrap:wrap; /* ← 重要：スマホ折り返し */
+  max-width:420px;
 }
+
+/* ✅ チェックボックス巨大化 */
+.memberRow input[type="checkbox"]{
+  transform: scale(1.8);
+  margin-right:6px;
+}
+
+/* 入力欄サイズ */
+.memberRow input[type="text"]{
+  width:140px;
+}
+
+.memberRow input[type="number"]{
+  width:90px;
+}
+
+/* 📱 小画面対応 */
+@media (max-width:480px){
+  .memberRow{
+    justify-content:flex-start;
+    padding-left:10px;
+  }
+  .memberRow input[type="text"]{
+    width:120px;
+  }
+  .memberRow input[type="number"]{
+    width:80px;
+  }
+}
+
+.timer{
+  font-size:64px;
+  margin:15px;
+}
+
+.result{
+  white-space:pre-line;
+  color:#7CFC00;
+  margin-top:10px;
+}
+
+.section{display:none;margin-top:15px;}
+.active{background:#0af;color:#fff;}
 </style>
 </head>
 <body>
@@ -48,6 +97,7 @@ input{
 <button onclick="showTab('utc')">🌍 UTC出発計算</button>
 </div>
 
+<!-- 以降のHTMLとJSはそのまま -->
 <div id="up" class="section" style="display:block;">
 <h2>カウントアップ</h2>
 <button onclick="calcUp()">計算</button>
@@ -230,3 +280,4 @@ function copyResult(id){
 </script>
 </body>
 </html>
+
